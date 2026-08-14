@@ -14,20 +14,14 @@ export class Enemy extends Entity {
         this.xp = def.xp;
         this.gold = def.gold;
         this.speed = def.speed;
-
-        // AI / attack animation state
         this.aiState = 'patrol';
         this.attackCooldown = 0;
         this.attackAnimTimer = 0;
-        this.blockTimer = 0; // brawler block window (visual + damage reduce)
-
+        this.blockTimer = 0;
         this.buildSprite(type);
     }
 
     buildSprite(type) {
-        // Type-specific palette + details. `type` is the enemy id
-        // (e.g. 'knife_wielder'); def.type is the behavior class
-        // (e.g. 'boss', 'tank').
         const opts = {};
         let paletteOpts = {};
 
@@ -38,26 +32,21 @@ export class Enemy extends Entity {
             paletteOpts.hair = 0x223311;
         } else if (type === 'viper_soldier') {
             opts.viper = true;
-            paletteOpts.gang = 0x33cc44; // viper green bandana
+            paletteOpts.gang = 0x33cc44;
             paletteOpts.accent = 0x33cc44;
         }
 
-        if (this.def.type === 'boss') {
-            opts.boss = true;
-        }
+        if (this.def.type === 'boss') opts.boss = true;
 
         const palette = paletteFromColor(this.def.color, paletteOpts);
         this.fighter = new FighterSprite(this.graphics, this.width, this.height, palette, opts);
 
-        // Knife wielders always visibly hold a knife.
         if (type === 'knife_wielder') {
             this.fighter.setWeapon({ color: 0xdddddd, len: 22, thick: 5 });
         }
-
         this.fighter.draw();
     }
 
-    // Called by AI to trigger a swing animation.
     playAttackAnim(duration = 0.3) {
         this.attackAnimTimer = duration;
         this._attackAnim = (this.def.type === 'tank') ? 'punch' : (Math.random() < 0.4 ? 'kick' : 'punch');
@@ -74,6 +63,7 @@ export class Enemy extends Entity {
             ai.updateEnemy(this, world.entities.find(e => e.constructor.name === 'Player'), dt, world);
         } else {
             this.vx *= 0.9;
+            this.depthVy *= 0.9;
         }
 
         this.updateAnim(dt);
@@ -81,17 +71,12 @@ export class Enemy extends Entity {
 
     updateAnim(dt) {
         let anim;
-        if (this.hitstun > 0) {
-            anim = 'hurt';
-        } else if (this.attackAnimTimer > 0) {
-            anim = this._attackAnim || 'punch';
-        } else if (!this.isGrounded) {
-            anim = 'jump';
-        } else if (Math.abs(this.vx) > 20) {
-            anim = 'walk';
-        } else {
-            anim = 'idle';
-        }
+        if (this.hitstun > 0) anim = 'hurt';
+        else if (this.attackAnimTimer > 0) anim = this._attackAnim || 'punch';
+        else if (!this.isGrounded) anim = 'jump';
+        else if (Math.abs(this.vx) > 20 || Math.abs(this.depthVy) > 20) anim = 'walk';
+        else anim = 'idle';
+
         this.fighter.play(anim);
         this.fighter.update(dt);
     }

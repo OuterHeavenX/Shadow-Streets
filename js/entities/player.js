@@ -10,6 +10,7 @@ import { events } from '../core/events.js';
 import { FighterSprite, paletteFromColor } from './fighterSprite.js';
 import { ComboSystem } from '../combat/combos.js';
 import { WEAPONS } from '../combat/weapons.js';
+import { shop } from '../ui/shop.js';
 
 export class Player extends Entity {
     constructor(x, y) {
@@ -22,14 +23,12 @@ export class Player extends Entity {
         this.inventory = new Inventory();
 
         this.speed = 250;
+        this.depthSpeed = 190;
         this.attackTimer = 0;
-        this.attackAnimTimer = 0; // how long the current attack anim shows
-
-        // Combo + weapon state
+        this.attackAnimTimer = 0;
         this.combos = new ComboSystem();
-        this.weapon = null;       // { def, uses }
+        this.weapon = null;
 
-        // Sprite / animation
         const palette = paletteFromColor(0x1a3a8f, {
             skin: 0xd4a88a,
             hair: 0x2b1a0f,
@@ -41,7 +40,6 @@ export class Player extends Entity {
         this.fighter.draw();
     }
 
-    // --- Weapon handling ---
     pickUpWeapon(weaponId) {
         const def = WEAPONS[weaponId];
         if (!def) return;
@@ -62,26 +60,31 @@ export class Player extends Entity {
 
     update(dt, world) {
         super.update(dt, world);
-
         if (this.hp <= 0) return;
+
         this.inventory.update(dt, this);
         this.combos.update(dt);
         if (this.attackTimer > 0) this.attackTimer -= dt;
         if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt;
 
-        if (this.hitstun <= 0 && this.attackTimer <= 0) {
+        if (this.hitstun <= 0 && this.attackTimer <= 0 && !shop.open) {
             this.handleInput(dt, world);
+        } else if (shop.open) {
+            this.vx = 0;
+            this.depthVy = 0;
         }
 
         if (this.isGrounded && this.attackTimer <= 0 && input.getAxisX() === 0) {
             this.vx *= 0.8;
+        }
+        if (this.isGrounded && this.attackTimer <= 0 && input.getAxisY() === 0) {
+            this.depthVy *= 0.8;
         }
 
         this.updateAnim(dt);
     }
 
     updateAnim(dt) {
-        // Determine animation from state priority: hurt > attack > jump > walk > idle
         let anim;
         if (this.hitstun > 0) {
             anim = 'hurt';
@@ -89,7 +92,7 @@ export class Player extends Entity {
             anim = this._attackAnim || 'punch';
         } else if (!this.isGrounded) {
             anim = 'jump';
-        } else if (Math.abs(this.vx) > 20) {
+        } else if (Math.abs(this.vx) > 20 || Math.abs(this.depthVy) > 20) {
             anim = 'walk';
         } else {
             anim = 'idle';
@@ -99,10 +102,19 @@ export class Player extends Entity {
     }
 
     handleInput(dt, world) {
-        const ax = input.getAxisX();
-        if (ax !== 0) {
-            this.vx = ax * this.speed;
-            this.dir = ax > 0 ? 1 : -1;
+        let ax = input.getAxisX();
+        let ay = input.getAxisY();
+        const mag = Math.hypot(ax, ay);
+        if (mag > 1) {
+            ax /= mag;
+            ay /= mag;
+        }
+
+        this.vx = ax * this.speed;
+        this.depthVy = ay * this.depthSpeed;
+
+        if (ax !== 0 || ay !== 0) {
+            if (Math.abs(ax) > 0.15) this.dir = ax > 0 ? 1 : -1;
             this.state = 'walk';
         } else {
             this.state = 'idle';
@@ -123,15 +135,14 @@ export class Player extends Entity {
 
     attack(type, world) {
         this.vx = 0;
+        this.depthVy = 0;
         this.attackTimer = type === 'light' ? 0.25 : 0.5;
 
-        // Alternate light between punch/kick visuals for variety
         this._attackAnim = type === 'heavy'
             ? 'punch'
             : ((this.combos.count % 2 === 1) ? 'punch' : 'kick');
         this.attackAnimTimer = this.attackTimer;
 
-        // Weapon bonuses
         const wDef = this.weapon ? this.weapon.def : null;
         let range = type === 'light' ? 50 : 70;
         let dmgBonus = 0;
@@ -141,12 +152,9 @@ export class Player extends Entity {
         }
 
         const hx = this.dir === 1 ? this.x + this.width : this.x - range;
-        const hy = this.y + 15;
-
-        const hits = combat.checkHits(hx, hy, range, 50, this, world);
+        const hits = combat.checkHits(hx, this.y, range, this.height, this, world);
         if (hits.length === 0) return;
 
-        // ---- resolve combo / hit type ----
         let launcher = false;
         let slam = false;
         let comboCount = 0;
@@ -156,14 +164,12 @@ export class Player extends Entity {
             comboCount = info.count;
             launcher = info.isLauncher;
         } else {
-            // heavy: slam if any target airborne
             const airborne = hits.some(e => !e.isGrounded);
             const info = this.combos.registerHeavy(airborne);
             slam = info.isSlam;
         }
 
         const heavyImpact = type === 'heavy' || launcher || slam;
-
         if (heavyImpact) audio.playHitHeavy();
         else audio.playHitLight();
 
@@ -175,25 +181,22 @@ export class Player extends Entity {
             let ky = type === 'heavy' ? -300 : -50;
 
             if (launcher) {
-                // uppercut: pop airborne, bigger knockback
                 dmg *= 1.4;
                 kx = this.dir * 250;
                 ky = -650;
             }
             if (slam) {
-                // ground pound the airborne target
                 dmg *= 1.6;
                 kx = this.dir * 300;
-                ky = 500; // slam downward
+                ky = 500;
             }
 
             dmg = Math.round(dmg);
             const color = heavyImpact ? '#ffaa00' : '#fff';
             ui.spawnFloatingText(dmg, enemy.x + enemy.width / 2, enemy.y, color);
 
-            // Impact feedback: hitstop, particles, shake, flash
             const ix = enemy.x + enemy.width / 2;
-            const iy = enemy.y + enemy.height * 0.4;
+            const iy = enemy.y + enemy.height * 0.4 - enemy.z;
             combat.applyImpact(enemy, ix, iy, {
                 heavy: heavyImpact,
                 color: launcher ? 0x66ddff : (slam ? 0xffcc33 : 0xffee66)
@@ -205,7 +208,6 @@ export class Player extends Entity {
                 events.emit('enemyKilled', enemy.id);
                 this.gainXp(enemy.xp);
                 this.gainMoney(Math.floor(Math.random() * (enemy.gold[1] - enemy.gold[0])) + enemy.gold[0]);
-                // Weapon drop hook (world may provide it)
                 if (world.dropWeaponMaybe) {
                     world.dropWeaponMaybe(enemy.x + enemy.width / 2, enemy.def && enemy.def.type);
                 }
@@ -213,7 +215,6 @@ export class Player extends Entity {
             }
         });
 
-        // Combo text
         if (type === 'light' && comboCount >= 2) {
             const label = launcher ? `COMBO x${comboCount} LAUNCH!` : `COMBO x${comboCount}`;
             ui.spawnFloatingText(label, this.x + this.width / 2, this.y - 55, '#ffee66');
@@ -221,7 +222,6 @@ export class Player extends Entity {
             ui.spawnFloatingText('SLAM!', this.x + this.width / 2, this.y - 55, '#ffcc33');
         }
 
-        // consume weapon durability once per swing that connected
         if (this.weapon) this.consumeWeaponUse();
     }
 
@@ -233,7 +233,7 @@ export class Player extends Entity {
             this.maxHp += 25;
             this.hp = this.maxHp;
             this.stats.str += 3;
-            ui.spawnFloatingText("LEVEL UP!", this.x, this.y - 40, '#00ffff');
+            ui.spawnFloatingText('LEVEL UP!', this.x, this.y - 40, '#00ffff');
         }
     }
 

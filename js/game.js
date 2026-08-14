@@ -3,6 +3,7 @@ import { renderer } from './core/renderer.js';
 import { camera } from './core/camera.js';
 import { input } from './core/input.js';
 import { World } from './world/world.js';
+import { streetJuice } from './world/streetJuice.js';
 import { Player } from './entities/player.js';
 import { ui } from './ui/ui.js';
 import { questSystem } from './quests/quests.js';
@@ -33,6 +34,7 @@ export class Game {
         saveSystem.applyToPlayer(this.player);
         const id = districtId || saveSystem.getCurrentDistrict();
         this.world.loadDistrict(id);
+        streetJuice.decorate(this.world.district);
         saveSystem.setCurrentDistrict(id);
         ui.startGame(this.player);
         questSystem.start(this.player);
@@ -44,9 +46,7 @@ export class Game {
     }
 
     update(dt) {
-        if (input.isJustPressed('Escape')) {
-            ui.toggleCharacterMenu();
-        }
+        if (input.isJustPressed('Escape')) ui.toggleCharacterMenu();
 
         if (this.paused || ui.isBlockingGameplay()) {
             ui.update(this.player);
@@ -85,6 +85,7 @@ export class Game {
 
     changeDistrict(id) {
         this.world.loadDistrict(id);
+        streetJuice.decorate(this.world.district);
         saveSystem.setCurrentDistrict(id);
         this.player.x = 100;
         this.player.y = 375;

@@ -26,7 +26,13 @@ export class Camera {
             offsetY = (Math.random() - 0.5) * this.shakeIntensity;
         }
         
-        renderer.worldContainer.position.set(-this.x + offsetX, offsetY);
+        // Vertical anchor: keep the ground (world y=500) visible near the
+        // bottom of the screen on short displays (e.g. iPhone landscape).
+        const GROUND_Y = 500;
+        const groundMargin = 40; // px of screen below the ground line
+        this.y = Math.min(0, window.innerHeight - (GROUND_Y + groundMargin));
+
+        renderer.worldContainer.position.set(-this.x + offsetX, this.y + offsetY);
         
         // Parallax
         renderer.bgContainer.position.set(this.x * 0.8, 0); // moves slower

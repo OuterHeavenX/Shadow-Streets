@@ -4,12 +4,12 @@ import { shop } from '../ui/shop.js';
 import { ui } from '../ui/ui.js';
 
 export class Storefront {
-    constructor({ id, x, y = 205, name, type, accent = 0xffcc33, sign = 'SHOP' }) {
+    constructor({ id, x, y = 170, name, type, accent = 0xffcc33, sign = 'SHOP' }) {
         this.id = id;
         this.x = x;
         this.y = y;
-        this.width = 190;
-        this.height = 220;
+        this.width = 230;
+        this.height = 205;
         this.name = name;
         this.type = type;
         this.accent = accent;
@@ -19,7 +19,6 @@ export class Storefront {
         this.graphics = new PIXI.Graphics();
         this.sprite.addChild(this.graphics);
         this._near = false;
-        this._prompted = false;
         this.draw();
         this.sprite.position.set(this.x, this.y);
     }
@@ -28,68 +27,70 @@ export class Storefront {
         const g = this.graphics;
         g.clear();
 
-        // Shadow + facade
-        g.roundRect(5, 12, 180, 204, 8).fill({ color: 0x080810, alpha: 0.7 });
-        g.rect(0, 0, 180, 205).fill(0x29273a);
-        g.rect(0, 0, 180, 20).fill(0x171522);
-        g.rect(0, 20, 180, 8).fill(this.accent);
+        // Wide facade anchored into the city block instead of a freestanding kiosk.
+        g.rect(-16, 8, 228, 198).fill({ color: 0x07070c, alpha: 0.55 });
+        g.rect(-22, 0, 220, 192).fill(0x29273a);
+        g.rect(-22, 0, 220, 18).fill(0x15131e);
+        g.rect(-22, 18, 220, 7).fill(this.accent);
+        g.rect(-12, 28, 200, 46).fill(0x10101a);
+        g.roundRect(-6, 33, 188, 36, 5).stroke({ color: this.accent, width: 3, alpha: 0.95 });
 
-        // Neon/sign band
-        g.roundRect(20, 38, 140, 42, 6).fill(0x10101a);
-        g.roundRect(24, 42, 132, 34, 4).stroke({ color: this.accent, width: 3, alpha: 0.95 });
+        // Windows with product silhouettes.
+        g.rect(-10, 92, 64, 64).fill(0x0d1420);
+        g.rect(122, 92, 64, 64).fill(0x0d1420);
+        g.rect(-5, 97, 54, 54).fill({ color: this.accent, alpha: 0.11 });
+        g.rect(127, 97, 54, 54).fill({ color: this.accent, alpha: 0.11 });
+        for (let i = 0; i < 3; i++) {
+            g.rect(3 + i * 14, 122 - i * 5, 9, 24 + i * 5).fill({ color: 0xf3e4b5, alpha: 0.28 });
+            g.circle(139 + i * 16, 128, 6 + i * 2).fill({ color: this.accent, alpha: 0.22 });
+        }
 
-        // Display windows
-        g.rect(16, 92, 58, 64).fill(0x111827);
-        g.rect(106, 92, 58, 64).fill(0x111827);
-        g.rect(20, 96, 50, 56).fill({ color: this.accent, alpha: 0.12 });
-        g.rect(110, 96, 50, 56).fill({ color: this.accent, alpha: 0.12 });
+        // Deep doorway reads as an actual entrance.
+        g.rect(62, 84, 52, 104).fill(0x05050a);
+        g.rect(69, 91, 38, 87).fill(0x172033);
+        g.rect(72, 95, 32, 60).fill({ color: this.accent, alpha: 0.08 });
+        g.circle(100, 137, 2).fill(this.accent);
+        g.rect(56, 182, 64, 10).fill(0x6a606b);
+        g.rect(52, 191, 72, 6).fill(0x3b3540);
 
-        // Door / threshold
-        g.rect(76, 92, 28, 94).fill(0x0b0b10);
-        g.rect(81, 99, 18, 74).fill(0x1d2433);
-        g.circle(96, 137, 2).fill(this.accent);
-        g.rect(72, 184, 36, 7).fill(0x55505f);
-
-        // Awning
-        for (let i = 0; i < 6; i++) {
-            g.rect(12 + i * 26, 82, 24, 10).fill(i % 2 ? 0xeee8d5 : this.accent);
+        // RCR-style striped awning.
+        for (let i = 0; i < 8; i++) {
+            g.rect(-8 + i * 24, 76, 22, 12).fill(i % 2 ? 0xeee8d5 : this.accent);
         }
 
         const label = new PIXI.Text({
             text: this.sign,
             style: {
-                fontFamily: 'monospace',
-                fontSize: 18,
-                fontWeight: '900',
-                fill: this.accent,
-                stroke: { color: 0x000000, width: 4 },
-                align: 'center'
+                fontFamily: 'monospace', fontSize: 19, fontWeight: '900',
+                fill: this.accent, stroke: { color: 0x000000, width: 4 }, align: 'center'
             }
         });
         label.anchor.set(0.5);
-        label.position.set(90, 59);
+        label.position.set(88, 51);
         this.sprite.addChild(label);
     }
 
     update(dt, world) {
         const player = world.entities.find(e => e.constructor.name === 'Player');
-        if (!player) return;
+        if (!player || shop.open) return;
 
-        const doorX = this.x + 90;
-        const playerFeetY = player.y + player.height;
-        const nearX = Math.abs((player.x + player.width / 2) - doorX) < 78;
-        const nearY = playerFeetY < 430;
-        const near = nearX && nearY;
+        const doorX = this.x + 88;
+        const playerCenterX = player.x + player.width / 2;
+        const feetY = player.y + player.height;
+        const nearX = Math.abs(playerCenterX - doorX) < 46;
+        const nearDoor = nearX && feetY < 405;
+        const walkingIntoDoor = nearDoor && (player.depthVy < -12 || input.getAxisY() < -0.18);
 
-        if (near && !shop.open) {
-            if (!this._near) {
-                ui.showDialogue(this.name, 'Press ENTER / Y to go inside.');
-            }
-            if (input.isJustPressed('Enter') || input.isJustPressed('KeyC')) {
-                shop.openShop(this.type, this.name, player, player.inventory);
-            }
+        if (nearDoor && !this._near) {
+            ui.showDialogue(this.name, 'Walk into the doorway to enter.');
         }
 
-        this._near = near;
+        if ((walkingIntoDoor || (nearDoor && (input.isJustPressed('Enter') || input.isJustPressed('KeyC')))) && shop.canReopen()) {
+            player.depthVy = 0;
+            player.vx = 0;
+            shop.openShop(this.type, this.name, player, player.inventory);
+        }
+
+        this._near = nearDoor;
     }
 }

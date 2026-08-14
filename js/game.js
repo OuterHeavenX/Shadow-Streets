@@ -11,6 +11,8 @@ import { combat } from './combat/combat.js';
 import { weaponPickups } from './combat/weaponPickups.js';
 import { environment } from './world/environment.js';
 import { weather } from './world/weather.js';
+import { saveSystem } from './save/save.js';
+import { audio } from './audio/audio.js';
 
 export class Game {
     constructor() {
@@ -27,13 +29,16 @@ export class Game {
         this.loop = new GameLoop(dt => this.update(dt), () => this.render());
     }
 
-    start() {
-        this.world.loadDistrict('neon_alley');
+    start(districtId = null) {
+        const id = districtId || saveSystem.getCurrentDistrict();
+        this.world.loadDistrict(id);
+        saveSystem.setCurrentDistrict(id);
         ui.startGame(this.player);
         questSystem.start(this.player);
         weaponPickups.reset();
         environment.reset();
         weather.reset();
+        audio.startMusic();
         this.loop.start();
     }
 
@@ -52,9 +57,37 @@ export class Game {
         particles.update(dt);
 
         ui.update(this.player);
+
+        // Dynamic music: check combat state a few times per second.
+        this._musicTimer = (this._musicTimer || 0) - dt;
+        if (this._musicTimer <= 0) {
+            this._musicTimer = 0.25;
+            audio.setMusicIntensity(this.getMusicIntensity());
+        }
+    }
+
+    // 'boss' if a living boss is in the district, 'combat' while any enemy
+    // is chasing/attacking the player, otherwise 'ambient'.
+    getMusicIntensity() {
+        let intensity = 'ambient';
+        for (const e of this.world.entities) {
+            if (!e.def || e.hp <= 0) continue;
+            if (e.isBoss) return 'boss';
+            if (e.aiState === 'chase' || e.aiState === 'attack') intensity = 'combat';
+        }
+        return intensity;
     }
 
     render() {
         renderer.render();
+    }
+
+    changeDistrict(id) {
+        this.world.loadDistrict(id);
+        saveSystem.setCurrentDistrict(id);
+        // Reset player position at the district entrance
+        this.player.x = 100;
+        this.player.y = 400;
+        saveSystem.save(this.player);
     }
 }

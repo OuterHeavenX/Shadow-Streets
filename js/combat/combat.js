@@ -6,40 +6,48 @@ import { camera } from '../core/camera.js';
 
 export class CombatManager {
     constructor() {
-        // Global hitstop timer. While > 0, the game loop advances entity
-        // updates with dt = 0 (frozen) but keeps rendering/particles alive.
         this.hitstop = 0;
+        this.depthTolerance = 58;
+        this.elevationTolerance = 82;
     }
 
     checkHits(hx, hy, hw, hh, attacker, world) {
         const hits = [];
-        const boxA = { x: hx, y: hy, width: hw, height: hh };
+        const attackLeft = hx;
+        const attackRight = hx + hw;
+        const attackerFeetY = attacker.y + attacker.height;
 
         for (let e of world.entities) {
             if (e === attacker) continue;
-
-            // Player vs Enemy validation
             if (attacker instanceof Player && !(e instanceof Enemy)) continue;
             if (attacker instanceof Enemy && !(e instanceof Player)) continue;
 
-            const boxB = { x: e.x, y: e.y, width: e.width, height: e.height };
-            if (physics.checkAABB(boxA, boxB)) {
-                hits.push(e);
-            }
+            const targetLeft = e.x;
+            const targetRight = e.x + e.width;
+            const xOverlap = attackLeft < targetRight && attackRight > targetLeft;
+            if (!xOverlap) continue;
+
+            // River City style hits require the fighters to be on roughly the
+            // same lane/depth instead of sharing one platform floor.
+            const targetFeetY = e.y + e.height;
+            const depthDist = Math.abs(attackerFeetY - targetFeetY);
+            if (depthDist > this.depthTolerance) continue;
+
+            // Jumping fighters can pass over grounded attacks when elevated.
+            const elevationDist = Math.abs((attacker.z || 0) - (e.z || 0));
+            if (elevationDist > this.elevationTolerance) continue;
+
+            hits.push(e);
         }
 
         return hits;
     }
 
-    // Freeze both entities briefly for impact weight.
     triggerHitstop(heavy = false) {
         const d = heavy ? 0.15 : 0.08;
-        // Keep the longest requested freeze.
         if (d > this.hitstop) this.hitstop = d;
     }
 
-    // Advance the global hitstop timer. Called by the game loop with real dt.
-    // Returns true while frozen.
     tickHitstop(dt) {
         if (this.hitstop > 0) {
             this.hitstop -= dt;
@@ -53,7 +61,6 @@ export class CombatManager {
         return this.hitstop > 0;
     }
 
-    // Full impact feedback bundle: hitstop + particles + shake + victim flash.
     applyImpact(victim, worldX, worldY, opts = {}) {
         const heavy = !!opts.heavy;
         const color = opts.color != null ? opts.color : 0xffee66;
@@ -62,25 +69,17 @@ export class CombatManager {
         this.triggerHitstop(heavy);
         particles.spawnHit(worldX, worldY, color, count, heavy ? 300 : 220);
 
-        if (heavy) {
-            camera.shake(10, 0.18);
-        } else {
-            camera.shake(4, 0.08);
-        }
+        if (heavy) camera.shake(10, 0.18);
+        else camera.shake(4, 0.08);
 
         if (victim) this.flashWhite(victim);
     }
 
-    // Brief white flash tint on the victim's graphics.
     flashWhite(victim) {
         const g = victim.graphics;
         if (!g) return;
         g.tint = 0xffffff;
-        // The red damage tint in Entity.takeDamage will override; we set a
-        // short-lived white flash first for a "pop".
-        g.tint = 0xffffff;
         clearTimeout(victim._flashTimer);
-        // Immediately show white, then let takeDamage's red tint follow.
         victim._flashTimer = setTimeout(() => {
             if (victim.graphics) victim.graphics.tint = 0xffffff;
         }, 60);

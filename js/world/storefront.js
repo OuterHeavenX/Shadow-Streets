@@ -26,28 +26,15 @@ export class Storefront {
     draw() {
         const g = this.graphics;
         g.clear();
-
-        // Deep contact shadow and full-height facade so the store feels built
-        // into the block instead of sitting on the road like a kiosk.
         g.roundRect(8, 14, 184, 208, 8).fill({ color: 0x05060b, alpha: 0.72 });
         g.rect(-8, -18, 196, 226).fill(0x252435);
         g.rect(-8, -18, 196, 15).fill(0x14131d);
         g.rect(-8, -3, 196, 7).fill(this.accent);
-
-        // Brick/panel seams.
-        for (let yy = 12; yy < 196; yy += 24) {
-            g.rect(-4, yy, 188, 2).fill({ color: 0xffffff, alpha: 0.025 });
-        }
-        for (let xx = 18; xx < 176; xx += 42) {
-            g.rect(xx, 8, 2, 182).fill({ color: 0x000000, alpha: 0.06 });
-        }
-
-        // Lightbox sign with layered border and glow band.
+        for (let yy = 12; yy < 196; yy += 24) g.rect(-4, yy, 188, 2).fill({ color: 0xffffff, alpha: 0.025 });
+        for (let xx = 18; xx < 176; xx += 42) g.rect(xx, 8, 2, 182).fill({ color: 0x000000, alpha: 0.06 });
         g.roundRect(15, 24, 150, 52, 7).fill(0x090b12);
         g.roundRect(19, 28, 142, 44, 5).stroke({ color: this.accent, width: 4, alpha: 0.96 });
         g.rect(24, 33, 132, 3).fill({ color: this.accent, alpha: 0.22 });
-
-        // Display windows with mullions and merchandise silhouettes.
         g.rect(10, 91, 66, 68).fill(0x0e1522);
         g.rect(104, 91, 66, 68).fill(0x0e1522);
         g.rect(15, 96, 56, 58).fill({ color: this.accent, alpha: 0.1 });
@@ -67,7 +54,6 @@ export class Storefront {
             g.circle(142, 131, 12).fill(0x3b7d54);
         }
 
-        // Recessed doorway, jambs, transom and threshold.
         g.rect(76, 86, 30, 103).fill(0x08090d);
         g.rect(80, 91, 22, 87).fill(0x1a2635);
         g.rect(81, 92, 20, 17).fill({ color: this.accent, alpha: 0.12 });
@@ -76,29 +62,17 @@ export class Storefront {
         g.rect(70, 184, 42, 8).fill(0x77717e);
         g.rect(64, 192, 54, 5).fill({ color: 0x050508, alpha: 0.55 });
 
-        // Awning with alternating fabric and support arms.
-        for (let i = 0; i < 7; i++) {
-            g.rect(5 + i * 25, 78, 23, 11).fill(i % 2 ? 0xe7e0ca : this.accent);
-        }
+        for (let i = 0; i < 7; i++) g.rect(5 + i * 25, 78, 23, 11).fill(i % 2 ? 0xe7e0ca : this.accent);
         g.rect(4, 89, 176, 3).fill(0x2d2c35);
         g.moveTo(12, 89).lineTo(4, 101).stroke({ color: 0x34323b, width: 2 });
         g.moveTo(172, 89).lineTo(180, 101).stroke({ color: 0x34323b, width: 2 });
-
-        // Side conduit + utility box makes the facade feel grounded.
         g.rect(176, 48, 3, 128).fill(0x474957);
         g.rect(168, 154, 18, 24).fill(0x3b3e48);
         g.rect(172, 160, 10, 3).fill(this.accent);
 
         const label = new PIXI.Text({
             text: this.sign,
-            style: {
-                fontFamily: 'monospace',
-                fontSize: 18,
-                fontWeight: '900',
-                fill: this.accent,
-                stroke: { color: 0x000000, width: 4 },
-                align: 'center'
-            }
+            style: { fontFamily: 'monospace', fontSize: 18, fontWeight: '900', fill: this.accent, stroke: { color: 0x000000, width: 4 }, align: 'center' }
         });
         label.anchor.set(0.5);
         label.position.set(90, 49);
@@ -112,17 +86,18 @@ export class Storefront {
         const doorX = this.x + 90;
         const playerCenterX = player.x + player.width / 2;
         const playerFeetY = player.y + player.height;
-        const nearX = Math.abs(playerCenterX - doorX) < 54;
-        const nearY = playerFeetY < 408;
-        const doorway = nearX && nearY;
+        const rearBoundary = world.district?.streetTop ?? 382;
+        const nearX = Math.abs(playerCenterX - doorX) < 56;
+        const atDoor = playerFeetY <= rearBoundary + 10;
+        const doorway = nearX && playerFeetY <= rearBoundary + 28;
 
         if (doorway && !shop.open && shop.canReopen()) {
-            // Walking into the recessed threshold opens naturally; keyboard/Y
-            // remains available for players who stop just short of it.
-            if (playerFeetY < 392 || input.isJustPressed('Enter') || input.isJustPressed('KeyC')) {
+            // The rear fence remains solid. Reaching the legal curb directly
+            // in front of a shop is enough to enter; no movement behind it is required.
+            if (atDoor || input.isJustPressed('Enter') || input.isJustPressed('KeyC')) {
                 shop.openShop(this.type, this.name, player, player.inventory);
             } else if (!this._near) {
-                ui.showDialogue(this.name, 'Door is open — walk inside.');
+                ui.showDialogue(this.name, 'Walk up to the door to enter.');
             }
         }
 

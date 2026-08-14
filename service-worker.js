@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shadow-streets-v2';
+const CACHE_NAME = 'shadow-streets-v3';
 const ASSETS = [
     './',
     './index.html',
@@ -24,8 +24,6 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Network-first: always try the network so updates land immediately;
-// fall back to cache only when offline.
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
     event.respondWith(

@@ -50,16 +50,26 @@ export class Entity {
     
     takeDamage(amt, knockbackX=0, knockbackY=0) {
         if (this.invincible > 0) return false;
+
+        // Brawler-style block: reduce damage + knockback while blocking.
+        if (this.blockTimer && this.blockTimer > 0) {
+            amt = Math.max(1, Math.round(amt * 0.3));
+            knockbackX *= 0.3;
+            knockbackY *= 0.3;
+        }
+
         this.hp -= amt;
         this.hitstun = 0.4;
         this.invincible = 0.1;
         this.vx = knockbackX;
         this.vy = knockbackY;
         this.isGrounded = false;
-        
-        this.graphics.tint = 0xff0000;
-        setTimeout(() => { if (this.graphics) this.graphics.tint = 0xffffff; }, 150);
-        
+
+        // Red damage tint following the combat white-flash pop.
+        clearTimeout(this._tintTimer);
+        this.graphics.tint = 0xff5555;
+        this._tintTimer = setTimeout(() => { if (this.graphics) this.graphics.tint = 0xffffff; }, 150);
+
         return this.hp <= 0;
     }
 }

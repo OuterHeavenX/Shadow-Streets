@@ -1,6 +1,7 @@
 import { Entity } from './entity.js';
 import { ENEMIES } from '../../data/enemies.js';
 import { ai } from '../ai/ai.js';
+import { FighterSprite, paletteFromColor } from './fighterSprite.js';
 
 export class Enemy extends Entity {
     constructor(type, x, y) {
@@ -13,39 +14,85 @@ export class Enemy extends Entity {
         this.xp = def.xp;
         this.gold = def.gold;
         this.speed = def.speed;
-        
-        this.drawSprite();
-        
+
+        // AI / attack animation state
         this.aiState = 'patrol';
         this.attackCooldown = 0;
+        this.attackAnimTimer = 0;
+        this.blockTimer = 0; // brawler block window (visual + damage reduce)
+
+        this.buildSprite(type);
     }
-    
-    drawSprite() {
-        const g = this.graphics;
-        g.clear();
-        
-        // Body
-        g.rect(0, 0, this.width, this.height).fill(this.def.color);
-        
-        // Details based on type
-        if (this.def.type === 'boss') {
-            g.rect(5, 5, 40, 20).fill(0xd4a88a); // Face
-            g.rect(20, 10, 8, 5).fill(0xff0000); // Shades
-            g.rect(0, 25, 50, 40).fill(0xeeeeee); // White suit
-        } else {
-            g.rect(5, 5, 30, 20).fill(0xd4a88a); // Face
-            g.rect(this.dir===1 ? 20 : 5, 10, 10, 5).fill(0x000000); // Eyes
+
+    buildSprite(type) {
+        // Type-specific palette + details. `type` is the enemy id
+        // (e.g. 'knife_wielder'); def.type is the behavior class
+        // (e.g. 'boss', 'tank').
+        const opts = {};
+        let paletteOpts = {};
+
+        if (type === 'knife_wielder') {
+            opts.knife = true;
+        } else if (type === 'brawler') {
+            opts.brawler = true;
+            paletteOpts.hair = 0x223311;
+        } else if (type === 'viper_soldier') {
+            opts.viper = true;
+            paletteOpts.gang = 0x33cc44; // viper green bandana
+            paletteOpts.accent = 0x33cc44;
         }
+
+        if (this.def.type === 'boss') {
+            opts.boss = true;
+        }
+
+        const palette = paletteFromColor(this.def.color, paletteOpts);
+        this.fighter = new FighterSprite(this.graphics, this.width, this.height, palette, opts);
+
+        // Knife wielders always visibly hold a knife.
+        if (type === 'knife_wielder') {
+            this.fighter.setWeapon({ color: 0xdddddd, len: 22, thick: 5 });
+        }
+
+        this.fighter.draw();
     }
-    
+
+    // Called by AI to trigger a swing animation.
+    playAttackAnim(duration = 0.3) {
+        this.attackAnimTimer = duration;
+        this._attackAnim = (this.def.type === 'tank') ? 'punch' : (Math.random() < 0.4 ? 'kick' : 'punch');
+    }
+
     update(dt, world) {
         super.update(dt, world);
         if (this.hp <= 0) return;
-        
+
+        if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt;
+        if (this.blockTimer > 0) this.blockTimer -= dt;
+
         if (this.hitstun <= 0) {
             ai.updateEnemy(this, world.entities.find(e => e.constructor.name === 'Player'), dt, world);
         } else {
             this.vx *= 0.9;
         }
+
+        this.updateAnim(dt);
+    }
+
+    updateAnim(dt) {
+        let anim;
+        if (this.hitstun > 0) {
+            anim = 'hurt';
+        } else if (this.attackAnimTimer > 0) {
+            anim = this._attackAnim || 'punch';
+        } else if (!this.isGrounded) {
+            anim = 'jump';
+        } else if (Math.abs(this.vx) > 20) {
+            anim = 'walk';
+        } else {
+            anim = 'idle';
+        }
+        this.fighter.play(anim);
+        this.fighter.update(dt);
     }
 }

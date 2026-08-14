@@ -7,9 +7,7 @@ import { shop } from './shop.js';
 import { characterMenu } from './characterMenu.js';
 
 class UIManager {
-    constructor() {
-        this.player = null;
-    }
+    constructor() { this.player = null; }
 
     init() {
         this.uiLayer = document.getElementById('ui-layer');
@@ -47,19 +45,16 @@ class UIManager {
                 <div class="action-btn" id="btn-pause">☰</div>
             </div>
         `;
-
-        menus.init();
-        touch.setup();
-        shop.init();
-        characterMenu.init();
+        menus.init(); touch.setup(); shop.init(); characterMenu.init();
     }
 
     showTitleScreen() { menus.showTitleScreen(); }
     hideTitleScreen() { menus.hideTitleScreen(); }
     startGame(player) { this.player = player; }
 
-    update(player) {
+    update(player, dt = 0) {
         hud.update(player);
+        if (shop.open) shop.update(dt);
         if (characterMenu.open) characterMenu.render();
     }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shadow-streets-v6';
+const CACHE_NAME = 'shadow-streets-v7';
 const ASSETS = [
     './',
     './index.html',

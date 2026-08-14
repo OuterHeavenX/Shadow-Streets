@@ -4,12 +4,13 @@ import { menus } from './menus.js';
 import { touch } from './touch.js';
 import { dialogue } from './dialogue.js';
 import { shop } from './shop.js';
+import { characterMenu } from './characterMenu.js';
 
 class UIManager {
     constructor() {
         this.player = null;
     }
-    
+
     init() {
         this.uiLayer = document.getElementById('ui-layer');
         this.uiLayer.innerHTML = `
@@ -38,32 +39,35 @@ class UIManager {
                 <div class="dialogue-text" id="dialogue-text"></div>
             </div>
             <div id="touch-controls" class="touch-controls">
-                <div class="joystick-zone" id="joystick-zone">
-                    <div class="joystick-knob" id="joystick-knob"></div>
-                </div>
+                <div class="joystick-zone" id="joystick-zone"><div class="joystick-knob" id="joystick-knob"></div></div>
                 <div class="action-btn" id="btn-a">A</div>
                 <div class="action-btn" id="btn-b">B</div>
                 <div class="action-btn" id="btn-x">X</div>
                 <div class="action-btn" id="btn-y">Y</div>
-                <div class="action-btn" id="btn-pause">||</div>
+                <div class="action-btn" id="btn-pause">☰</div>
             </div>
         `;
-        
+
         menus.init();
         touch.setup();
         shop.init();
+        characterMenu.init();
     }
-    
+
     showTitleScreen() { menus.showTitleScreen(); }
     hideTitleScreen() { menus.hideTitleScreen(); }
-    
     startGame(player) { this.player = player; }
-    
-    update(player) { hud.update(player); }
+
+    update(player) {
+        hud.update(player);
+        if (characterMenu.open) characterMenu.render();
+    }
+
+    toggleCharacterMenu() { characterMenu.toggle(this.player); }
+    isBlockingGameplay() { return characterMenu.open || shop.open; }
     showBoss(name) { hud.showBoss(name); }
     updateBossHp(hp, maxHp) { hud.updateBossHp(hp, maxHp); }
     hideBoss() { hud.hideBoss(); }
-    
     showDialogue(name, text) { dialogue.showDialogue(name, text); }
 
     updateQuestTracker(questSystem) {
@@ -73,25 +77,21 @@ class UIManager {
         if (entries.length === 0) { el.innerHTML = ''; return; }
         el.innerHTML = entries.map(entry =>
             `<div class="quest-name">◆ ${entry.quest.name}</div>` +
-            entry.quest.objectives.map(o =>
-                `<div class="quest-obj">${o.label}: ${entry.progress[o.id]}/${o.count}</div>`
-            ).join('')
+            entry.quest.objectives.map(o => `<div class="quest-obj">${o.label}: ${entry.progress[o.id]}/${o.count}</div>`).join('')
         ).join('');
     }
-    
+
     spawnFloatingText(text, x, y, color='#fff') {
         const el = document.createElement('div');
         el.className = 'floating-text';
         el.innerText = text;
-        // Approximation logic to map world space to screen space based on camera
-        let screenLeft = 50; 
+        let screenLeft = 50;
         if (window.game && window.game.world) {
-            // Very naive approximation for visual feedback without rigorous projection
             const camX = window.game.world.cameraX - window.innerWidth/2;
             screenLeft = ((x - camX) / window.innerWidth) * 100;
         }
         el.style.left = `${screenLeft}%`;
-        el.style.top = `50%`;
+        el.style.top = `${Math.max(15, Math.min(80, (y / 600) * 100))}%`;
         el.style.color = color;
         document.getElementById('ui-layer').appendChild(el);
         setTimeout(() => el.remove(), 1000);

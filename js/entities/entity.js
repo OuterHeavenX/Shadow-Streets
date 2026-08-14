@@ -4,11 +4,11 @@ import { physics } from '../physics/physics.js';
 export class Entity {
     constructor(x, y, width, height) {
         this.x = x;
-        this.y = y; // street-depth position (top of the fighter footprint)
+        this.y = y;
         this.vx = 0;
         this.depthVy = 0;
-        this.vy = 0; // jump / launch velocity only
-        this.z = 0;  // elevation above the street plane
+        this.vy = 0;
+        this.z = 0;
         this.width = width;
         this.height = height;
 
@@ -24,22 +24,19 @@ export class Entity {
         this.state = 'idle';
         this.hitstun = 0;
         this.invincible = 0;
+        this.renderScale = 1;
     }
 
     update(dt, world) {
         if (this.hitstun > 0) this.hitstun -= dt;
         if (this.invincible > 0) this.invincible -= dt;
 
-        // Horizontal knockback/movement remains active during hitstun.
         this.x += this.vx * dt;
         if (this.hitstun > 0) this.vx *= 0.9;
 
-        // Belt-scroll depth movement is independent from jumping.
         this.y += this.depthVy * dt;
         if (this.hitstun > 0) this.depthVy *= 0.88;
 
-        // Jump/launcher physics happen on a separate elevation axis so the
-        // fighter can still move up/down the street while airborne.
         if (!this.isGrounded || this.z > 0) {
             this.vy += 1200 * dt;
             this.z -= this.vy * dt;
@@ -52,12 +49,15 @@ export class Entity {
 
         physics.resolveStreet(this, world);
 
-        // Draw elevated fighters above their street position while depth
-        // sorting continues to use their feet on the street plane.
-        this.sprite.scale.x = this.dir;
+        // Fighters are rendered larger than their gameplay footprint so the
+        // street keeps its current dimensions while characters read better.
+        const s = this.renderScale !== 1
+            ? this.renderScale
+            : (this.fighter ? (this.isBoss ? 1.24 : 1.18) : 1);
+        this.sprite.scale.set(this.dir * s, s);
         this.sprite.position.set(
-            this.x + (this.dir === -1 ? this.width : 0),
-            this.y - this.z
+            this.x + (this.dir === -1 ? this.width * s : 0),
+            this.y - this.z - this.height * (s - 1)
         );
     }
 

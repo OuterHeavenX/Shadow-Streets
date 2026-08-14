@@ -1,0 +1,1 @@
+export class QuestSystem { constructor() { this.quests = {}; } }

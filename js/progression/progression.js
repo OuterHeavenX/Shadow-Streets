@@ -1,0 +1,1 @@
+export class Progression { constructor() { this.stats = {}; } }

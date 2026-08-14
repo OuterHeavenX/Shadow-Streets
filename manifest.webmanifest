@@ -1,0 +1,11 @@
+{
+  "name": "Shadow Streets",
+  "short_name": "ShadowSts",
+  "description": "A browser RPG brawler",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0a0f",
+  "theme_color": "#00ffff",
+  "icons": []
+}

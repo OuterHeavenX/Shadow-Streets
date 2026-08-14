@@ -1,10 +1,12 @@
 import { audio } from '../audio/audio.js';
 import { Game } from '../game.js';
+import { saveSystem } from '../save/save.js';
 
 export class Menus {
     init() {
         document.getElementById('btn-new-game').onclick = () => {
             audio.init();
+            saveSystem.data = saveSystem.getDefaultData();
             this.hideTitleScreen();
             window.game = new Game();
             window.game.start();

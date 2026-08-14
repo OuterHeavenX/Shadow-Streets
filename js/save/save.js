@@ -5,8 +5,29 @@ export class SaveSystem {
     
     getDefaultData() {
         return {
-            player: { level: 1, xp: 0, hp: 100, maxHp: 100, money: 50, str: 10, vit: 10, agi: 10, tech: 10 }
+            player: { level: 1, xp: 0, hp: 100, maxHp: 100, money: 50, str: 10, vit: 10, agi: 10, tech: 10 },
+            progress: { unlockedDistricts: ['neon_alley'], currentDistrict: 'neon_alley' }
         };
+    }
+    
+    unlockDistrict(id) {
+        if (!this.data.progress) this.data.progress = this.getDefaultData().progress;
+        if (!this.data.progress.unlockedDistricts.includes(id)) {
+            this.data.progress.unlockedDistricts.push(id);
+        }
+    }
+    
+    setCurrentDistrict(id) {
+        if (!this.data.progress) this.data.progress = this.getDefaultData().progress;
+        this.data.progress.currentDistrict = id;
+    }
+    
+    isDistrictUnlocked(id) {
+        return !!(this.data.progress && this.data.progress.unlockedDistricts.includes(id));
+    }
+    
+    getCurrentDistrict() {
+        return (this.data.progress && this.data.progress.currentDistrict) || 'neon_alley';
     }
     
     save(player) {
@@ -22,6 +43,8 @@ export class SaveSystem {
         if (d) {
             try {
                 this.data = JSON.parse(d);
+                // Migrate old saves that predate district progress
+                if (!this.data.progress) this.data.progress = this.getDefaultData().progress;
                 return true;
             } catch(e) {}
         }

@@ -27,19 +27,102 @@ export class World {
     }
     
     loadDistrict(id) {
+        // Clear all non-player entities when switching districts
+        const player = this.entities.find(e => e.constructor.name === 'Player');
+        for (let i = this.entities.length - 1; i >= 0; i--) {
+            if (this.entities[i] !== player) this.removeEntity(this.entities[i]);
+        }
+        this.bossSpawned = false;
+        this.spawnTimer = 0;
         this.district = DISTRICTS[id];
         this.buildBackground();
         this.spawnNPCs();
     }
     
     spawnNPCs() {
-        // Spawn hardcoded NPCs based on zones for the demo
+        if (this.district.id === 'the_docks') {
+            this.addEntity(new NPC('salty_joe', 400, 420, 'SALTY JOE (Shop)', 0x226688, 'Welcome to the Docks, kid. The Harbor Shark runs this place now. Stock up.', 'items'));
+            this.addEntity(new NPC('marina', 3200, 420, 'MARINA (Fish Grill)', 0xcc6600, 'Fresh off the boat! A full belly keeps you swinging.', 'food'));
+            return;
+        }
+        // Neon Alley NPCs
         this.addEntity(new NPC('terry', 400, 420, 'TERRY (Shop)', 0x00aa00, 'Hey Alex! The Vipers are going crazy today. Gear up before you head out!', 'items'));
         this.addEntity(new NPC('old_mama', 3200, 420, 'OLD MAMA (Ramen)', 0xaa0000, 'Eat well, fight well! What can I get you, dear?', 'food'));
         this.addEntity(new NPC('sensei', 4600, 420, 'SENSEI KWAN', 0xaaaaaa, 'Your technique lacks focus. Defeat King Viper and I will train you.'));
     }
     
     buildBackground() {
+        if (this.district.theme === 'harbor') {
+            this.buildHarborBackground();
+            return;
+        }
+        this.buildCityBackground();
+    }
+    
+    buildHarborBackground() {
+        renderer.bgContainer.removeChildren();
+        renderer.mgContainer.removeChildren();
+        
+        // Cold blue night sky over the water
+        const sky = new PIXI.Graphics();
+        sky.rect(0, 0, this.district.width, 400).fill(0x0a1a2a);
+        renderer.bgContainer.addChild(sky);
+        
+        // Distant water with faint moonlit shimmer
+        const water = new PIXI.Graphics();
+        water.rect(0, 280, this.district.width, 120).fill(0x0e2a40);
+        for (let i = 0; i < this.district.width; i += 140) {
+            water.rect(i + Math.random() * 60, 300 + Math.random() * 80, 40, 3).fill(0x1e4a66);
+        }
+        renderer.bgContainer.addChild(water);
+        
+        // Cranes on the horizon
+        const cranes = new PIXI.Graphics();
+        for (let i = 0; i < 12; i++) {
+            const cx = i * 700 + 200;
+            cranes.rect(cx, 120, 14, 260).fill(0x14202e);       // mast
+            cranes.rect(cx - 120, 120, 260, 12).fill(0x14202e); // jib
+            cranes.rect(cx + 120, 132, 4, 60).fill(0x14202e);   // cable
+        }
+        renderer.bgContainer.addChild(cranes);
+        
+        // Stacked shipping containers (midground)
+        const containers = new PIXI.Graphics();
+        const containerColors = [0x1d4e6b, 0x2a6a8a, 0x33566b, 0x0f3a52, 0x3a7ca5];
+        for (let i = 0; i < 55; i++) {
+            const x = i * 150;
+            const stack = 1 + Math.floor(Math.random() * 3);
+            for (let s = 0; s < stack; s++) {
+                const c = containerColors[Math.floor(Math.random() * containerColors.length)];
+                containers.rect(x, 420 - s * 60, 130, 55).fill(c);
+                containers.rect(x + 10, 430 - s * 60, 4, 35).fill(0x0a1622); // corrugation lines
+                containers.rect(x + 60, 430 - s * 60, 4, 35).fill(0x0a1622);
+                containers.rect(x + 110, 430 - s * 60, 4, 35).fill(0x0a1622);
+            }
+        }
+        renderer.mgContainer.addChild(containers);
+        
+        // Rolling fog banks
+        const fog = new PIXI.Graphics();
+        for (let i = 0; i < 60; i++) {
+            const fx = Math.random() * this.district.width;
+            const fy = 340 + Math.random() * 160;
+            fog.ellipse(fx, fy, 120 + Math.random() * 120, 25 + Math.random() * 20)
+               .fill({ color: 0x9ab8cc, alpha: 0.06 + Math.random() * 0.06 });
+        }
+        renderer.mgContainer.addChild(fog);
+        
+        // Wet dock planks
+        const ground = new PIXI.Graphics();
+        ground.rect(0, this.district.groundY, this.district.width, this.district.height - this.district.groundY).fill(0x1e2a34);
+        for (let i = 0; i < this.district.width; i += 90) {
+            ground.rect(i, this.district.groundY, 3, this.district.height - this.district.groundY).fill(0x121c24); // plank seams
+            ground.rect(i + 20, this.district.groundY + 30, 45, 4).fill(0x4a6a80); // wet sheen
+        }
+        renderer.fgContainer.addChildAt(ground, 0);
+    }
+    
+    buildCityBackground() {
         renderer.bgContainer.removeChildren();
         renderer.mgContainer.removeChildren();
         
@@ -99,7 +182,7 @@ export class World {
         if (enemyCount < 4) {
             const type = zone.spawns[Math.floor(Math.random() * zone.spawns.length)];
             
-            if (type === 'king_viper') {
+            if (type === 'king_viper' || type === 'harbor_shark') {
                 if (!this.bossSpawned) {
                     const boss = new Boss(type, player.x + 300, 400);
                     this.addEntity(boss);

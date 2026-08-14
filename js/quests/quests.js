@@ -7,6 +7,7 @@ export class QuestSystem {
         this.active = {};   // id -> { quest, progress: { objectiveId: n } }
         this.completed = [];
         this.player = null;
+        this.killLog = {}; // enemyId -> total kills, so late-activating quests get credit
     }
 
     start(player) {
@@ -24,13 +25,24 @@ export class QuestSystem {
         const quest = QUESTS[questId];
         if (!quest) return;
         const progress = {};
-        quest.objectives.forEach(o => progress[o.id] = 0);
-        this.active[questId] = { quest, progress };
+        // Credit kills that happened before the quest activated (e.g. boss
+        // defeated early) so the chain can never dead-end.
+        quest.objectives.forEach(o => {
+            let prior = 0;
+            if (o.type === 'kill') {
+                prior = o.targets.reduce((sum, t) => sum + (this.killLog[t] || 0), 0);
+            }
+            progress[o.id] = Math.min(prior, o.count);
+        });
+        const entry = { quest, progress };
+        this.active[questId] = entry;
         ui.showDialogue('NEW QUEST', `${quest.name} — ${quest.desc}`);
         ui.updateQuestTracker(this);
+        this.checkComplete(entry);
     }
 
     onKill(enemyId) {
+        this.killLog[enemyId] = (this.killLog[enemyId] || 0) + 1;
         for (const entry of Object.values(this.active)) {
             let changed = false;
             for (const obj of entry.quest.objectives) {
@@ -57,13 +69,14 @@ export class QuestSystem {
         if (r.xp) this.player.gainXp(r.xp);
         ui.showDialogue('QUEST COMPLETE', `${quest.name}! Reward: $${r.money} + ${r.xp} XP`);
 
-        // Chain to next quest
+        ui.updateQuestTracker(this);
+
+        // Chain to next quest immediately — no delay window where kills could be missed
         for (const q of Object.values(QUESTS)) {
             if (q.trigger.type === 'quest_complete' && q.trigger.quest === quest.id) {
-                setTimeout(() => this.activate(q.id), 4500);
+                this.activate(q.id);
             }
         }
-        ui.updateQuestTracker(this);
     }
 }
 

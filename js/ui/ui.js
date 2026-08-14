@@ -3,6 +3,7 @@ import { hud } from './hud.js';
 import { menus } from './menus.js';
 import { touch } from './touch.js';
 import { dialogue } from './dialogue.js';
+import { shop } from './shop.js';
 
 class UIManager {
     constructor() {
@@ -26,6 +27,7 @@ class UIManager {
                     <div class="hud-bar-bg"><div class="hud-bar-fill hud-xp" id="hud-xp"></div></div>
                 </div>
                 <div class="hud-money" id="hud-money">$0</div>
+                <div class="hud-quest" id="hud-quest"></div>
                 <div class="hud-boss" id="hud-boss">
                     <div class="hud-boss-name" id="hud-boss-name">BOSS</div>
                     <div class="hud-boss-bar-bg"><div class="hud-bar-fill hud-boss-hp" id="hud-boss-hp"></div></div>
@@ -49,6 +51,7 @@ class UIManager {
         
         menus.init();
         touch.setup();
+        shop.init();
     }
     
     showTitleScreen() { menus.showTitleScreen(); }
@@ -62,6 +65,19 @@ class UIManager {
     hideBoss() { hud.hideBoss(); }
     
     showDialogue(name, text) { dialogue.showDialogue(name, text); }
+
+    updateQuestTracker(questSystem) {
+        const el = document.getElementById('hud-quest');
+        if (!el) return;
+        const entries = Object.values(questSystem.active);
+        if (entries.length === 0) { el.innerHTML = ''; return; }
+        el.innerHTML = entries.map(entry =>
+            `<div class="quest-name">◆ ${entry.quest.name}</div>` +
+            entry.quest.objectives.map(o =>
+                `<div class="quest-obj">${o.label}: ${entry.progress[o.id]}/${o.count}</div>`
+            ).join('')
+        ).join('');
+    }
     
     spawnFloatingText(text, x, y, color='#fff') {
         const el = document.createElement('div');

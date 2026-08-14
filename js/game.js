@@ -5,6 +5,7 @@ import { input } from './core/input.js';
 import { World } from './world/world.js';
 import { Player } from './entities/player.js';
 import { ui } from './ui/ui.js';
+import { questSystem } from './quests/quests.js';
 
 export class Game {
     constructor() {
@@ -17,6 +18,7 @@ export class Game {
     start() {
         this.world.loadDistrict('neon_alley');
         ui.startGame(this.player);
+        questSystem.start(this.player);
         this.loop.start();
     }
     

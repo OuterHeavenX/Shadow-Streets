@@ -5,6 +5,8 @@ import { audio } from '../audio/audio.js';
 import { combat } from '../combat/combat.js';
 import { camera } from '../core/camera.js';
 import { ui } from '../ui/ui.js';
+import { Inventory } from '../inventory/inventory.js';
+import { events } from '../core/events.js';
 
 export class Player extends Entity {
     constructor(x, y) {
@@ -14,6 +16,7 @@ export class Player extends Entity {
         this.level = 1;
         this.xp = 0;
         this.money = 50;
+        this.inventory = new Inventory();
         
         this.speed = 250;
         this.attackTimer = 0;
@@ -40,6 +43,7 @@ export class Player extends Entity {
         super.update(dt, world);
         
         if (this.hp <= 0) return;
+        this.inventory.update(dt, this);
         if (this.attackTimer > 0) this.attackTimer -= dt;
         
         if (this.hitstun <= 0 && this.attackTimer <= 0) {
@@ -106,6 +110,7 @@ export class Player extends Entity {
                 const dead = enemy.takeDamage(dmg, kx, ky);
                 if (dead) {
                     audio.playDeath();
+                    events.emit('enemyKilled', enemy.id);
                     this.gainXp(enemy.xp);
                     this.gainMoney(Math.floor(Math.random() * (enemy.gold[1] - enemy.gold[0])) + enemy.gold[0]);
                     world.removeEntity(enemy);

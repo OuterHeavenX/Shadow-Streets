@@ -34,8 +34,8 @@ export class World {
     
     spawnNPCs() {
         // Spawn hardcoded NPCs based on zones for the demo
-        this.addEntity(new NPC('terry', 400, 420, 'TERRY (Shop)', 0x00aa00, 'Hey Alex! The Vipers are going crazy today. Be careful out there!'));
-        this.addEntity(new NPC('old_mama', 3200, 420, 'OLD MAMA (Ramen)', 0xaa0000, 'Eat well, fight well! Come back when I implement the shop menu!'));
+        this.addEntity(new NPC('terry', 400, 420, 'TERRY (Shop)', 0x00aa00, 'Hey Alex! The Vipers are going crazy today. Gear up before you head out!', 'items'));
+        this.addEntity(new NPC('old_mama', 3200, 420, 'OLD MAMA (Ramen)', 0xaa0000, 'Eat well, fight well! What can I get you, dear?', 'food'));
         this.addEntity(new NPC('sensei', 4600, 420, 'SENSEI KWAN', 0xaaaaaa, 'Your technique lacks focus. Defeat King Viper and I will train you.'));
     }
     

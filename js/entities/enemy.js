@@ -7,6 +7,7 @@ export class Enemy extends Entity {
         const def = ENEMIES[type];
         super(x, y, def.width, def.height);
         this.def = def;
+        this.id = def.id;
         this.hp = def.hp;
         this.maxHp = def.hp;
         this.xp = def.xp;

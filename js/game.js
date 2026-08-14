@@ -17,13 +17,13 @@ import { audio } from './audio/audio.js';
 export class Game {
     constructor() {
         this.world = new World();
-        this.player = new Player(100, 400);
+        this.player = new Player(100, 375);
         this.world.addEntity(this.player);
 
-        // Weapon drop hook used by player.attack when an enemy dies.
         this.world.dropWeaponMaybe = (x, enemyType) => {
-            const groundY = (this.world.district && this.world.district.groundY) || 500;
-            weaponPickups.maybeDrop(x, groundY, enemyType);
+            // Keep drops on the same belt-scroll lane the player is fighting on.
+            const laneY = this.player.y + this.player.height * 0.6 + 10;
+            weaponPickups.maybeDrop(x, laneY, enemyType);
         };
 
         this.loop = new GameLoop(dt => this.update(dt), () => this.render());
@@ -43,22 +43,17 @@ export class Game {
     }
 
     update(dt) {
-        // Global hitstop: freeze gameplay simulation but keep feedback alive.
         const frozen = combat.tickHitstop(dt);
         const simDt = frozen ? 0 : dt;
 
         this.world.update(simDt, this.player);
         weaponPickups.update(dt, this.player);
         camera.follow(this.player.x, dt);
-
-        // Ambient systems (always run on real dt for smooth visuals)
         environment.update(dt);
         weather.update(dt, camera.x);
         particles.update(dt);
-
         ui.update(this.player);
 
-        // Dynamic music: check combat state a few times per second.
         this._musicTimer = (this._musicTimer || 0) - dt;
         if (this._musicTimer <= 0) {
             this._musicTimer = 0.25;
@@ -66,8 +61,6 @@ export class Game {
         }
     }
 
-    // 'boss' if a living boss is in the district, 'combat' while any enemy
-    // is chasing/attacking the player, otherwise 'ambient'.
     getMusicIntensity() {
         let intensity = 'ambient';
         for (const e of this.world.entities) {
@@ -85,9 +78,11 @@ export class Game {
     changeDistrict(id) {
         this.world.loadDistrict(id);
         saveSystem.setCurrentDistrict(id);
-        // Reset player position at the district entrance
         this.player.x = 100;
-        this.player.y = 400;
+        this.player.y = 375;
+        this.player.depthVy = 0;
+        this.player.z = 0;
+        this.player.isGrounded = true;
         saveSystem.save(this.player);
     }
 }

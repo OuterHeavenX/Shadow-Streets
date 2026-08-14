@@ -1,0 +1,112 @@
+:root {
+    --bg: #0a0a0f;
+    --text: #f0f0f5;
+    --accent-cyan: #00ffff;
+    --accent-pink: #ff00ff;
+    --accent-orange: #ff8800;
+    --health: #ff3333;
+    --stamina: #ffff33;
+    --xp: #3388ff;
+    --menu-bg: rgba(10, 10, 15, 0.9);
+}
+
+* { box-sizing: border-box; user-select: none; -webkit-touch-callout: none; }
+body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; }
+
+#game-container, #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+#game-container { z-index: 1; }
+#ui-layer { z-index: 2; pointer-events: none; }
+
+.interactive { pointer-events: auto; }
+.hidden { display: none !important; }
+
+/* Menu System */
+.menu-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--menu-bg); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: auto;
+}
+.title { font-size: 5rem; font-weight: bold; color: var(--accent-cyan); text-shadow: 0 0 20px var(--accent-cyan); margin-bottom: 50px; text-align: center; font-family: Impact, sans-serif; letter-spacing: 2px;}
+.menu-options { display: flex; flex-direction: column; gap: 20px; }
+.menu-btn { background: none; border: 2px solid transparent; color: var(--text); font-size: 2rem; cursor: pointer; padding: 10px 40px; transition: all 0.2s; font-family: 'Courier New', monospace; }
+.menu-btn:hover { color: var(--accent-pink); border-color: var(--accent-pink); text-shadow: 0 0 10px var(--accent-pink); }
+.menu-btn:disabled { color: #555; cursor: not-allowed; }
+
+/* HUD */
+.hud-container { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+.hud-top-left { position: absolute; top: 20px; left: 20px; }
+.hud-bar-bg { width: 200px; height: 15px; background: rgba(255,255,255,0.1); border: 2px solid #222; margin-bottom: 5px; }
+.hud-bar-fill { height: 100%; width: 100%; transition: width 0.1s; }
+.hud-hp { background: var(--health); }
+.hud-xp { background: var(--xp); }
+.hud-stamina { background: var(--stamina); }
+.hud-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; text-shadow: 2px 2px 0 #000; }
+.hud-money { position: absolute; bottom: 20px; right: 20px; font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 0 #000; font-weight: bold; }
+.hud-boss { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+.hud-boss-name { font-size: 1.5rem; color: #fff; margin-bottom: 5px; text-shadow: 2px 2px 0 #000; }
+.hud-boss-bar-bg { width: 400px; height: 20px; background: rgba(0,0,0,0.8); border: 2px solid #fff; }
+.hud-boss-hp { height: 100%; background: #ff0000; width: 100%; }
+
+/* Dialogue */
+.dialogue-box { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; background: rgba(0,0,0,0.9); border: 2px solid var(--accent-cyan); padding: 20px; display: none; pointer-events: auto; cursor: pointer; }
+.dialogue-name { color: var(--accent-orange); font-size: 1.2rem; margin-bottom: 10px; font-weight: bold; }
+.dialogue-text { font-size: 1.2rem; line-height: 1.5; }
+
+/* Floating Text */
+.floating-text { position: absolute; font-size: 1.5rem; font-weight: bold; text-shadow: 2px 2px 0 #000; pointer-events: none; transform: translate(-50%, -100%); animation: floatUp 1s forwards; }
+@keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -100%); } 100% { opacity: 0; transform: translate(-50%, -150%); } }
+
+/* Controls */
+.touch-controls { position: absolute; width: 100%; height: 100%; display: none; pointer-events: none; }
+@media (hover: none) and (pointer: coarse) { .touch-controls { display: block; } }
+
+/* Joystick — bottom-left with iPhone safe area */
+.joystick-zone {
+    position: absolute;
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    left: calc(40px + env(safe-area-inset-left, 0px));
+    width: 130px; height: 130px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    pointer-events: auto;
+    touch-action: none;
+}
+.joystick-knob {
+    position: absolute; top: 50%; left: 50%;
+    width: 54px; height: 54px;
+    background: rgba(255,255,255,0.28);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+/* Action buttons — bottom-right with iPhone safe area */
+.action-btn {
+    position: absolute;
+    width: 72px; height: 72px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    pointer-events: auto;
+    touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: bold;
+    color: rgba(255,255,255,0.6);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.action-btn:active { background: rgba(255,255,255,0.35); border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+/* Diamond layout — bottom-right, iPhone safe area aware */
+#btn-a { bottom: calc(44px  + env(safe-area-inset-bottom, 0px)); right: calc(120px + env(safe-area-inset-right, 0px)); color: rgba(100,255,100,0.7); border-color: rgba(100,255,100,0.4); } /* Jump  */
+#btn-b { bottom: calc(120px + env(safe-area-inset-bottom, 0px)); right: calc(44px  + env(safe-area-inset-right, 0px)); color: rgba(255,100,100,0.7); border-color: rgba(255,100,100,0.4); } /* Attack */
+#btn-x { bottom: calc(120px + env(safe-area-inset-bottom, 0px)); right: calc(196px + env(safe-area-inset-right, 0px)); color: rgba(100,100,255,0.7); border-color: rgba(100,100,255,0.4); } /* Heavy */
+#btn-y { bottom: calc(196px + env(safe-area-inset-bottom, 0px)); right: calc(120px + env(safe-area-inset-right, 0px)); color: rgba(255,200,50,0.7);  border-color: rgba(255,200,50,0.4);  } /* Dodge */
+#btn-pause {
+    top: calc(20px + env(safe-area-inset-top, 0px));
+    right: calc(20px + env(safe-area-inset-right, 0px));
+    width: 52px; height: 52px;
+    bottom: auto;
+    font-size: 1rem;
+}

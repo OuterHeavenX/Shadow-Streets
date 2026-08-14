@@ -49,15 +49,15 @@ export class Entity {
 
         physics.resolveStreet(this, world);
 
-        // Fighters are rendered larger than their gameplay footprint so the
-        // street keeps its current dimensions while characters read better.
+        // RCR-style chibi presentation: fighters render 30% smaller while
+        // retaining their gameplay footprint/hitboxes and the current street size.
         const s = this.renderScale !== 1
             ? this.renderScale
-            : (this.fighter ? (this.isBoss ? 1.24 : 1.18) : 1);
+            : (this.fighter ? (this.isBoss ? 0.82 : 0.70) : 1);
         this.sprite.scale.set(this.dir * s, s);
         this.sprite.position.set(
             this.x + (this.dir === -1 ? this.width * s : 0),
-            this.y - this.z - this.height * (s - 1)
+            this.y - this.z + this.height * (1 - s)
         );
     }
 

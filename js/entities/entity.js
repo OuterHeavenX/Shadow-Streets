@@ -4,54 +4,66 @@ import { physics } from '../physics/physics.js';
 export class Entity {
     constructor(x, y, width, height) {
         this.x = x;
-        this.y = y;
+        this.y = y; // street-depth position (top of the fighter footprint)
         this.vx = 0;
-        this.vy = 0;
+        this.depthVy = 0;
+        this.vy = 0; // jump / launch velocity only
+        this.z = 0;  // elevation above the street plane
         this.width = width;
         this.height = height;
-        
+
         this.sprite = new PIXI.Container();
         this.graphics = new PIXI.Graphics();
         this.sprite.addChild(this.graphics);
         this.sprite.position.set(this.x, this.y);
-        
+
         this.dir = 1;
         this.hp = 100;
         this.maxHp = 100;
-        this.isGrounded = false;
+        this.isGrounded = true;
         this.state = 'idle';
         this.hitstun = 0;
         this.invincible = 0;
     }
-    
+
     update(dt, world) {
         if (this.hitstun > 0) this.hitstun -= dt;
         if (this.invincible > 0) this.invincible -= dt;
-        
-        if (!this.isGrounded) {
+
+        // Horizontal knockback/movement remains active during hitstun.
+        this.x += this.vx * dt;
+        if (this.hitstun > 0) this.vx *= 0.9;
+
+        // Belt-scroll depth movement is independent from jumping.
+        this.y += this.depthVy * dt;
+        if (this.hitstun > 0) this.depthVy *= 0.88;
+
+        // Jump/launcher physics happen on a separate elevation axis so the
+        // fighter can still move up/down the street while airborne.
+        if (!this.isGrounded || this.z > 0) {
             this.vy += 1200 * dt;
+            this.z -= this.vy * dt;
+            if (this.z <= 0) {
+                this.z = 0;
+                this.vy = 0;
+                this.isGrounded = true;
+            }
         }
-        
-        if (this.hitstun <= 0) {
-            this.x += this.vx * dt;
-        } else {
-            this.x += this.vx * dt; // continue knockback
-            this.vx *= 0.9;
-        }
-        
-        this.y += this.vy * dt;
-        
-        physics.resolveFloor(this);
-        
-        // Pivot approach for flipping
+
+        physics.resolveStreet(this, world);
+
+        // Draw elevated fighters above their street position while depth
+        // sorting continues to use their feet on the street plane.
         this.sprite.scale.x = this.dir;
-        this.sprite.position.set(this.x + (this.dir === -1 ? this.width : 0), this.y);
+        this.sprite.position.set(
+            this.x + (this.dir === -1 ? this.width : 0),
+            this.y - this.z
+        );
     }
-    
-    takeDamage(amt, knockbackX=0, knockbackY=0) {
+
+    takeDamage(amt, knockbackX = 0, knockbackY = 0) {
         if (this.invincible > 0) return false;
 
-        // Brawler-style block: reduce damage + knockback while blocking.
         if (this.blockTimer && this.blockTimer > 0) {
             amt = Math.max(1, Math.round(amt * 0.3));
             knockbackX *= 0.3;
@@ -65,10 +77,11 @@ export class Entity {
         this.vy = knockbackY;
         this.isGrounded = false;
 
-        // Red damage tint following the combat white-flash pop.
         clearTimeout(this._tintTimer);
         this.graphics.tint = 0xff5555;
-        this._tintTimer = setTimeout(() => { if (this.graphics) this.graphics.tint = 0xffffff; }, 150);
+        this._tintTimer = setTimeout(() => {
+            if (this.graphics) this.graphics.tint = 0xffffff;
+        }, 150);
 
         return this.hp <= 0;
     }

@@ -5,6 +5,8 @@ export const DISTRICTS = {
         width: 8000,
         height: 600,
         groundY: 500,
+        streetTop: 345,
+        streetBottom: 545,
         theme: 'city',
         zones: [
             { id: 'start', start: 0, end: 1200, spawns: [], npcs: ['terry'] },
@@ -21,6 +23,8 @@ export const DISTRICTS = {
         width: 8000,
         height: 600,
         groundY: 500,
+        streetTop: 345,
+        streetBottom: 545,
         theme: 'harbor',
         zones: [
             { id: 'gate', start: 0, end: 1000, spawns: [], npcs: ['salty_joe'] },

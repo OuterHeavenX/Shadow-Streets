@@ -19,9 +19,9 @@ export class Game {
         this.world = new World();
         this.player = new Player(100, 375);
         this.world.addEntity(this.player);
+        this.paused = false;
 
         this.world.dropWeaponMaybe = (x, enemyType) => {
-            // Keep drops on the same belt-scroll lane the player is fighting on.
             const laneY = this.player.y + this.player.height * 0.6 + 10;
             weaponPickups.maybeDrop(x, laneY, enemyType);
         };
@@ -30,6 +30,7 @@ export class Game {
     }
 
     start(districtId = null) {
+        saveSystem.applyToPlayer(this.player);
         const id = districtId || saveSystem.getCurrentDistrict();
         this.world.loadDistrict(id);
         saveSystem.setCurrentDistrict(id);
@@ -43,6 +44,15 @@ export class Game {
     }
 
     update(dt) {
+        if (input.isJustPressed('Escape')) {
+            ui.toggleCharacterMenu();
+        }
+
+        if (this.paused || ui.isBlockingGameplay()) {
+            ui.update(this.player);
+            return;
+        }
+
         const frozen = combat.tickHitstop(dt);
         const simDt = frozen ? 0 : dt;
 
@@ -71,9 +81,7 @@ export class Game {
         return intensity;
     }
 
-    render() {
-        renderer.render();
-    }
+    render() { renderer.render(); }
 
     changeDistrict(id) {
         this.world.loadDistrict(id);

@@ -5,7 +5,9 @@ export const DISTRICTS = {
         width: 8000,
         height: 600,
         groundY: 500,
-        streetTop: 345,
+        // Rear gameplay boundary is the road-facing curb. The sidewalk/fence
+        // above it remains scenery only and cannot be walked on.
+        streetTop: 382,
         streetBottom: 545,
         theme: 'city',
         zones: [
@@ -23,7 +25,7 @@ export const DISTRICTS = {
         width: 8000,
         height: 600,
         groundY: 500,
-        streetTop: 345,
+        streetTop: 382,
         streetBottom: 545,
         theme: 'harbor',
         zones: [

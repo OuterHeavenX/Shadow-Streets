@@ -6,6 +6,7 @@ import { World } from './world/world.js';
 import { streetJuice } from './world/streetJuice.js';
 import { Player } from './entities/player.js';
 import { ui } from './ui/ui.js';
+import { shop } from './ui/shop.js';
 import { questSystem } from './quests/quests.js';
 import { particles } from './core/particles.js';
 import { combat } from './combat/combat.js';
@@ -46,9 +47,13 @@ export class Game {
     }
 
     update(dt) {
-        if (input.isJustPressed('Escape')) ui.toggleCharacterMenu();
+        if (input.isJustPressed('Escape')) {
+            if (shop.open) shop.close();
+            else ui.toggleCharacterMenu();
+        }
 
         if (this.paused || ui.isBlockingGameplay()) {
+            if (shop.open) shop.update(dt);
             ui.update(this.player);
             return;
         }
@@ -63,6 +68,12 @@ export class Game {
         weather.update(dt, camera.x);
         particles.update(dt);
         ui.update(this.player);
+
+        // Keep selected foreground props over fighters for true belt-scroll
+        // occlusion without changing the playable street dimensions.
+        if (renderer.streetForeground && renderer.streetForeground.parent === renderer.fgContainer) {
+            renderer.fgContainer.setChildIndex(renderer.streetForeground, renderer.fgContainer.children.length - 1);
+        }
 
         this._musicTimer = (this._musicTimer || 0) - dt;
         if (this._musicTimer <= 0) {

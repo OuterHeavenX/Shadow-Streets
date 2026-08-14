@@ -1,8 +1,9 @@
-const CACHE_NAME = 'shadow-streets-v3';
+const CACHE_NAME = 'shadow-streets-v4';
 const ASSETS = [
     './',
     './index.html',
     './css/styles.css',
+    './css/juice.css',
     './js/main.js'
 ];
 

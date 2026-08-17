@@ -7,6 +7,7 @@ const NAMES=['MIA','JAY','TESS','OMAR','LENA','NICO','RHEA','VIN'];
 export class Civilian extends Entity {
   constructor(x,y,index=0){
     super(x,y,36,72);
+    this.renderScale=.72;
     this.id=`civilian_${index}`;
     this.name=NAMES[index%NAMES.length];
     this.homeX=x;

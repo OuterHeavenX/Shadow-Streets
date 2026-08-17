@@ -4,6 +4,7 @@ import { DISTRICTS } from '../../data/districts.js';
 import { Enemy } from '../entities/enemy.js';
 import { Boss } from '../entities/boss.js';
 import { NPC } from '../entities/npc.js';
+import { Civilian } from '../entities/civilian.js';
 import { Storefront } from './storefront.js';
 
 export class World {
@@ -17,7 +18,7 @@ export class World {
         const player=this.entities.find(e=>e.constructor.name==='Player');
         for(let i=this.entities.length-1;i>=0;i--) if(this.entities[i]!==player)this.removeEntity(this.entities[i]);
         this.clearScenery(); this.bossSpawned=false; this.spawnTimer=0; this.district=DISTRICTS[id];
-        this.buildBackground(); this.spawnStores(); this.spawnNPCs();
+        this.buildBackground(); this.spawnStores(); this.spawnNPCs(); this.spawnCivilians();
         if(player){ const feet=455; player.y=feet-player.height; player.depthVy=0; player.z=0; player.isGrounded=true; }
     }
 
@@ -31,6 +32,14 @@ export class World {
         this.addEntity(new Storefront({id:'metro_gear',x:4050,name:'METRO FIGHT GEAR',type:'items',accent:0x8f7cff,sign:'GEAR'}));
     }
     spawnNPCs(){ if(this.district.id==='neon_alley') this.addEntity(new NPC('sensei',4700,380,'SENSEI KWAN',0xaaaaaa,'Your technique lacks focus. Defeat King Viper and I will train you.')); }
+    spawnCivilians(){
+        const count=this.district.id==='the_docks'?7:10;
+        for(let i=0;i<count;i++){
+            const x=720+i*(this.district.width-1300)/Math.max(1,count-1)+(i%2)*65;
+            const feet=405+(i%3)*45;
+            this.addEntity(new Civilian(x,feet-72,i));
+        }
+    }
     buildBackground(){ if(this.district.theme==='harbor')this.buildHarborBackground(); else this.buildCityBackground(); }
 
     buildHarborBackground(){
@@ -46,9 +55,6 @@ export class World {
         renderer.bgContainer.removeChildren(); renderer.mgContainer.removeChildren();
         const sky=new PIXI.Graphics(); sky.rect(0,0,this.district.width,300).fill(0x1a1a2e); renderer.bgContainer.addChild(sky);
         const backBuildings=new PIXI.Graphics(); for(let i=0;i<80;i++)backBuildings.rect(i*100,90+Math.random()*120,84,240).fill(0x111122); renderer.bgContainer.addChild(backBuildings);
-
-        // Restore the long parallel bridge/cable lines that gave Neon Alley
-        // its bridge-like perspective. They stay behind buildings/fighters.
         const bridge=new PIXI.Graphics();
         for(let section=-1;section<Math.ceil(this.district.width/1800)+1;section++){
             const sx=section*1800;
@@ -56,7 +62,6 @@ export class World {
             bridge.moveTo(sx-180,-18).lineTo(sx+1630,264).stroke({color:0x3f4b5b,width:2,alpha:.42});
         }
         renderer.bgContainer.addChild(bridge);
-
         const buildings=new PIXI.Graphics(); for(let i=0;i<50;i++){const bx=i*200;buildings.rect(bx,150+Math.random()*60,168,190).fill(0x2a2a3e);const neon=[0x00ffff,0xff00ff,0xff8800][i%3];buildings.rect(bx+12,238,12,60).fill({color:neon,alpha:.75});for(let w=0;w<3;w++)buildings.rect(bx+45+w*34,220,18,24).fill({color:0xffd76a,alpha:.16});} renderer.mgContainer.addChild(buildings);
         const street=new PIXI.Graphics();street.rect(0,320,this.district.width,45).fill(0x555564);street.rect(0,365,this.district.width,180).fill(0x2c2d38);street.rect(0,545,this.district.width,55).fill(0x44444f);street.rect(0,361,this.district.width,4).fill(0x888895);street.rect(0,541,this.district.width,4).fill(0x171720);for(let i=0;i<this.district.width;i+=190)street.rect(i+25,445,88,5).fill({color:0xe4dca9,alpha:.32});for(let i=0;i<this.district.width;i+=115)street.rect(i,382+(i%4)*25,48,2).fill({color:0xffffff,alpha:.05});this.addScenery(street,0);
     }
